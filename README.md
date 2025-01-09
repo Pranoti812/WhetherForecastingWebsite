@@ -1,1 +1,1 @@
-# WhetherForecastingWebsite
+# WeatherForecastingWebsite
