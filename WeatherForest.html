@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather App</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #f0f8ff;
+  }
+  
+  .container {
+    max-width: 600px;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+  }
+  
+  input {
+    padding: 10px;
+    font-size: 16px;
+    margin: 10px 0;
+    width: 80%;
+  }
+  
+  button {
+    padding: 10px;
+    font-size: 16px;
+    background-color: #007BFF;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background-color: #0056b3;
+  }
+  
+  #currentWeather {
+    margin: 20px 0;
+  }
+  
+  canvas {
+    max-width: 100%;
+    height: auto;
+  }
+  </style>
+  
+</head>
+<body>
+  <div class="container">
+    <h1>Weather App</h1>
+    <input type="text" id="cityInput" placeholder="Enter city name">
+    <button id="fetchWeatherBtn">Get Weather</button>
+
+    <div id="currentWeather">
+      <h2>Current Weather</h2>
+      <p id="weatherDetails"></p>
+    </div>
+
+    <canvas id="weatherChart"></canvas>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="app.js"></script>
+  // API configuration
+const apiKey = 'YOUR_OPENWEATHERMAP_API_KEY'; // Replace with your OpenWeatherMap API key
+const apiUrl = 'https://api.openweathermap.org/data/2.5/';
+
+const fetchWeatherBtn = document.getElementById('fetchWeatherBtn');
+const cityInput = document.getElementById('cityInput');
+const weatherDetails = document.getElementById('weatherDetails');
+const ctx = document.getElementById('weatherChart').getContext('2d');
+
+// Event listener for fetching weather data
+fetchWeatherBtn.addEventListener('click', () => {
+  const city = cityInput.value;
+  if (city) {
+    getWeather(city);
+  }
+});
+
+// Function to get current weather and forecast
+async function getWeather(city) {
+  try {
+    // Fetch current weather
+    const currentWeatherRes = await fetch(`${apiUrl}weather?q=${city}&appid=${apiKey}&units=metric`);
+    const currentWeatherData = await currentWeatherRes.json();
+
+    // Fetch forecast
+    const forecastRes = await fetch(`${apiUrl}forecast/daily?q=${city}&cnt=7&appid=${apiKey}&units=metric`);
+    const forecastData = await forecastRes.json();
+
+    displayCurrentWeather(currentWeatherData);
+    displayForecast(forecastData);
+  } catch (error) {
+    alert('City not found or error fetching data');
+  }
+}
+
+// Function to display current weather data
+function displayCurrentWeather(data) {
+  const date = new Date(data.dt * 1000).toLocaleString();
+  weatherDetails.innerHTML = `
+    <strong>${data.name}, ${data.sys.country}</strong><br>
+    Condition: ${data.weather[0].description}<br>
+    Temperature: ${data.main.temp}°C<br>
+    Humidity: ${data.main.humidity}%<br>
+    Wind Speed: ${data.wind.speed} m/s<br>
+    Date and Time: ${date}
+  `;
+}
+
+// Function to display 7-day forecast
+function displayForecast(data) {
+  const labels = data.list.map(day => new Date(day.dt * 1000).toLocaleDateString());
+  const temps = data.list.map(day => day.temp.day);
+  const humidity = data.list.map(day => day.humidity);
+  
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Temperature (°C)',
+          data: temps,
+          borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          fill: true,
+        },
+        {
+          label: 'Humidity (%)',
+          data: humidity,
+          borderColor: 'rgb(54, 162, 235)',
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          fill: true,
+        },
+      ],
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+// Optionally get user's geolocation and fetch default weather for Delhi
+navigator.geolocation.getCurrentPosition((position) => {
+  const { latitude, longitude } = position.coords;
+  fetch(`${apiUrl}weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric`)
+    .then(response => response.json())
+    .then(data => {
+      displayCurrentWeather(data);
+    });
+}, () => {
+  // Default to Delhi if geolocation is unavailable
+  getWeather('Delhi');
+});
+</body>
+</html>
+
+
